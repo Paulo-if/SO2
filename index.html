@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flashcards — Sistemas Operacionais II</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,sans-serif;background:#f5f5f3;color:#1a1a18;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
+  .app{width:100%;max-width:680px}
+  h1{font-size:18px;font-weight:500;margin-bottom:1rem;color:#1a1a18}
+  .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;gap:8px;flex-wrap:wrap}
+  .aula-btns{display:flex;gap:6px;flex-wrap:wrap}
+  .aula-btn{padding:4px 14px;font-size:13px;border:1px solid #ccc;border-radius:8px;background:transparent;color:#555;cursor:pointer;transition:all .15s}
+  .aula-btn.active{background:#e8e8e4;color:#1a1a18;border-color:#999;font-weight:500}
+  .progress{font-size:13px;color:#888;white-space:nowrap}
+  .card-wrap{perspective:800px;margin:1.5rem 0;min-height:260px}
+  .card{position:relative;width:100%;min-height:260px;transform-style:preserve-3d;transition:transform .5s;cursor:pointer}
+  .card.flipped{transform:rotateY(180deg)}
+  .face{position:absolute;width:100%;min-height:260px;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:14px;border:1px solid #e0e0db;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.75rem;text-align:center}
+  .front{background:#fff}
+  .back{transform:rotateY(180deg);background:#f0efe8}
+  .qnum{font-size:11px;color:#aaa;margin-bottom:.75rem;text-transform:uppercase;letter-spacing:.05em}
+  .qtext{font-size:15px;color:#1a1a18;line-height:1.65;max-width:540px}
+  .qtype{font-size:11px;color:#bbb;margin-top:.75rem}
+  .answer-label{font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem}
+  .answer{font-size:15px;color:#1a1a18;line-height:1.65;max-width:540px;font-weight:500}
+  .hint{font-size:12px;color:#bbb;margin-top:1.5rem}
+  .nav{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .nav button{padding:9px 22px;font-size:14px;border:1px solid #ccc;border-radius:8px;background:#fff;color:#1a1a18;cursor:pointer;transition:all .15s}
+  .nav button:hover{background:#f0efe8}
+  .nav button:disabled{opacity:.3;cursor:default}
+  .idx{font-size:14px;color:#888}
+  small{font-size:13px;color:#666;line-height:1.8}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Flashcards — Sistemas Operacionais II</h1>
+  <div class="header">
+    <div class="aula-btns" id="aulaBtns"></div>
+    <div class="progress" id="progress"></div>
+  </div>
+  <div class="card-wrap">
+    <div class="card" id="card" onclick="flipCard()">
+      <div class="face front">
+        <div class="qnum" id="qnum"></div>
+        <div class="qtext" id="qtext"></div>
+        <div class="qtype" id="qtype"></div>
+      </div>
+      <div class="face back">
+        <div class="answer-label">Resposta</div>
+        <div class="answer" id="answer"></div>
+        <div class="hint">clique para voltar</div>
+      </div>
+    </div>
+  </div>
+  <div class="nav">
+    <button id="btnPrev" onclick="go(-1)">&#8592; anterior</button>
+    <span class="idx" id="idx"></span>
+    <button id="btnNext" onclick="go(1)">próxima &#8594;</button>
+  </div>
+</div>
+<script>
+const data={
+  "Aula 08":[
+    {q:"Por que o fsck deixou de ser viável para servidores modernos?",opts:["a) Corrompia dados ao usar lost+found","b) Apagava o Dirty Bit antes de finalizar","c) Complexidade O(N) — varrer TBs levaria dias","d) Não funciona em SSDs"],ans:"c) Complexidade O(N) — varrer TBs levaria dias, causando inatividade inaceitável.",type:"mc"},
+    {q:"Se a energia cair após atualizar só o Inode (Cenário B), qual é a consequência?",opts:["a) Space Leak — bloco inutilizável","b) Usuário lê lixo e bloco livre pode causar cross-linking","c) Arquivo salvo, mas tamanho incorreto","d) Dado perdido, consistência mantida"],ans:"b) Usuário lê lixo; bloco marcado como livre pode ser alocado para outro arquivo (cross-linking).",type:"mc"},
+    {q:"Quando o SO considera uma transação de Journaling segura contra quedas de energia?",opts:["a) Após o Checkpointing","b) Ao iniciar o Journal Write","c) Ao repassar dados para a controladora","d) No Commit — TxCommit gravado fisicamente no Diário"],ans:"d) No Commit — quando o bloco TxCommit é fisicamente gravado no Diário.",type:"mc"},
+    {q:"Qual é a característica do modo Ordered (padrão Linux/Ext4)?",opts:["a) Só metadados, sem ordem forçada","b) Metadados + dados do usuário no Diário","c) Só metadados, mas dados gravados antes do TxCommit","d) Ignora metadados, foca nos dados"],ans:"c) Só metadados no Diário, mas força a gravação dos dados antes de escrever o TxCommit.",type:"mc"},
+    {q:"O que ocorre exatamente na fase de Checkpointing?",opts:["a) Escreve intenções no Diário","b) Apaga a transação obsoleta do Diário","c) Grava as alterações nos endereços definitivos do disco (Inode, Bitmap)","d) Faz varredura O(N) na árvore de diretórios"],ans:"c) O SO grava as alterações nos locais definitivos do disco.",type:"mc"},
+    {q:"Quais são as 3 operações físicas ao adicionar um bloco e como geram o Crash Consistency Problem?",ans:"Atualizar Bitmap + Gravar dados + Atualizar Inode. Se a energia cair entre elas, o disco fica em estado inconsistente.",type:"open"},
+    {q:"Como o Journaling recupera um disco de 50 TB em segundos, diferente do fsck?",ans:"Lê apenas o Diário, reaplicando transações com TxCommit sem Checkpoint concluído. O fsck varreria o disco inteiro, levando dias.",type:"open"},
+  ],
+  "Aula 11":[
+    {q:"Qual a diferença entre Proteção e Segurança em Sistemas Operacionais?",opts:["a) Segurança = Kernel; Proteção = rede","b) São sinônimos para bloqueio de hackers","c) Proteção = mecanismo interno do SO; Segurança = estado geral frente a ameaças externas","d) Proteção = Ring 3; Segurança = Ring 0"],ans:"c) Proteção é o mecanismo interno do SO; Segurança é o estado geral frente a ameaças externas.",type:"mc"},
+    {q:"Como um editor de texto (Ring 3) consegue salvar um arquivo no disco?",opts:["a) Desativa hardware via interrupção (Trap)","b) System Call — pede ao Kernel (Ring 0) que execute a operação","c) Usa atalho simbólico na RAM","d) Assume Ring 0 permanentemente"],ans:"b) Faz uma System Call, pedindo ao Kernel (Ring 0) que realize a ação.",type:"mc"},
+    {q:"Qual modelo fatia a Matriz de Acesso por Linhas (Sujeitos), funcionando como 'ingresso inforjável' para o usuário?",opts:["a) ACL","b) ASLR","c) Condição de Corrida","d) Capabilities"],ans:"d) Capabilities.",type:"mc"},
+    {q:"Qual é o objetivo técnico principal de um ataque de Buffer Overflow?",opts:["a) Apagar dados da Pilha","b) Alterar o Bit NX","c) Sobrescrever o Endereço de Retorno para executar shellcode","d) Ler permissões da ACL"],ans:"c) Sobrescrever o Endereço de Retorno e redirecionar a CPU para executar o shellcode.",type:"mc"},
+    {q:"O que o ASLR introduz como contra-ataque a ataques que dependem de prever endereços de memória?",opts:["a) Randomiza senhas a cada boot","b) Isola apps em Sandbox","c) Virtualização randomizada da CPU","d) Embaralha localização da Pilha, Heap e bibliotecas a cada boot"],ans:"d) Embaralha aleatoriamente as posições na RAM a cada boot.",type:"mc"},
+    {q:"Explique a 'janela temporal' do ataque TOCTOU e como o atacante acessa /etc/shadow.",ans:"Entre o Check (permissão aprovada) e o Use (acesso ao arquivo), o atacante substitui o arquivo original por um symlink apontando para o arquivo secreto.",type:"open"},
+    {q:"Como o Bit NX (DEP) impede injeção de código mesmo com shellcode na memória?",ans:"Marca áreas de dados como Não-Executáveis. Ao tentar executar o shellcode, a CPU detecta a flag e bloqueia por hardware.",type:"open"},
+  ],
+  "Aula 13":[
+    {q:"Qual é a principal desvantagem arquitetural das Capabilities?",opts:["a) Exige varredura do disco inteiro","b) Revogar é difícil — Capability já distribuída é difícil de rastrear e destruir","c) Exige matriz gigante na RAM","d) Kernel Linux não suporta"],ans:"b) Revogação é difícil — encontrar e destruir uma Capability já distribuída é um pesadelo.",type:"mc"},
+    {q:"Como o SO recorta a Matriz de Acesso para implementar ACLs?",opts:["a) Por linhas (sujeitos)","b) Por hash MD5","c) Por colunas (objetos) — cada arquivo carrega sua própria lista de permissões","d) Por Tokens JWT"],ans:"c) Por colunas: cada arquivo/recurso carrega consigo a lista de quem pode acessá-lo.",type:"mc"},
+    {q:"O que a engenharia moderna adiciona à senha antes do hash para impedir Rainbow Tables?",opts:["a) Salt — sequência aleatória concatenada à senha","b) Token físico USB","c) Algoritmo do Windows Hello","d) Biometria da íris"],ans:"a) Salt — sequência aleatória que torna hashes únicos mesmo para senhas iguais.",type:"mc"},
+    {q:"Qual é o exemplo clássico de autenticação por Posse (o usuário TEM algo)?",opts:["a) Digital ou reconhecimento facial","b) Senha, PIN ou resposta secreta","c) Smartcard, token USB (YubiKey) ou Soft Token (Google Authenticator)","d) JWT armazenado em SQLite"],ans:"c) Smartcard (e-CPF), YubiKey ou Google Authenticator.",type:"mc"},
+    {q:"Em sistemas corporativos, como os SOs calibram FAR e FRR na biometria?",opts:["a) FAR máximo para reduzir fricção","b) FAR zerado, mesmo que aumente o FRR","c) Ignora ambas as taxas","d) Aceita senha em caso de falha biométrica"],ans:"b) FAR zerado (nenhuma falsa aceitação), mesmo que o FRR aumente.",type:"mc"},
+    {q:"Por que a proteção interna do SO é cega sem Autenticação?",ans:"O SO confia só no ID logado, sem saber se é o dono real. A Autenticação é o elo que prova a identidade antes de aplicar as regras de acesso.",type:"open"},
+    {q:"Cite as duas desvantagens das ACLs.",ans:"1) Leitura de metadados do disco é lenta. 2) Listar todos os arquivos acessíveis por um usuário exige varrer todo o disco.",type:"open"},
+  ],
+  "Aula 15":[
+    {q:"Qual é o mecanismo de ação de um ataque de Buffer Overflow?",opts:["a) Apaga a tabela de páginas da MMU","b) Envia dados além do buffer para sobrescrever o Endereço de Retorno e executar shellcode","c) Altera o Log do sistema de arquivos na RAM","d) Desativa fisicamente o Bit NX"],ans:"b) Sobrescreve o Endereço de Retorno e força a CPU a executar o shellcode.",type:"mc"},
+    {q:"Como o ASLR protege o sistema?",opts:["a) Separa fisicamente tabelas de página","b) Pede senha a cada acesso à memória dinâmica","c) Marca áreas de memória como só-execução","d) Embaralha Pilha, Heap e Bibliotecas a cada boot/carregamento"],ans:"d) Embaralha posições na RAM a cada boot, destruindo a previsibilidade do atacante.",type:"mc"},
+    {q:"A regra W^X (DEP/Bit NX) impõe que:",opts:["a) Página seja modificável e executável ao mesmo tempo","b) A Stack seja sempre executável","c) Página pode ser Writable OU Executable, nunca ambas","d) O SO modifique código em execução"],ans:"c) Writable OU Executable — nunca as duas ao mesmo tempo.",type:"mc"},
+    {q:"Qual é a função técnica do 'Canário de Pilha'?",opts:["a) Restringir quais System Calls o processo pode fazer","b) Valor aleatório secreto entre variáveis locais e Endereço de Retorno; se alterado, aborta","c) Mapear RAM fora do espaço virtual","d) Redirecionar overflow para área segura"],ans:"b) Valor secreto vigia o Endereço de Retorno — qualquer adulteração encerra o processo imediatamente.",type:"mc"},
+    {q:"A ferramenta seccomp (Linux) aplica qual princípio de defesa?",opts:["a) Isolamento via KPTI","b) Sandboxing — limita quais System Calls o processo pode fazer","c) Proteção via Bit XD da Intel","d) Aceleração de contêineres Docker"],ans:"b) Sandboxing — restringe System Calls disponíveis, prendendo o invasor sem ferramentas.",type:"mc"},
+    {q:"Qual técnica foi criada especificamente para mitigar ataques de canal lateral do processador como o Meltdown?",opts:["a) ASLR","b) Canários de Pilha","c) KPTI — separa completamente tabelas de página do usuário e do Kernel","d) DEP"],ans:"c) KPTI — isolamento completo das tabelas de página.",type:"mc"},
+    {q:"Explique o papel do ASLR e do DEP juntos contra shellcode via Buffer Overflow.",ans:"ASLR remove a previsibilidade do endereço. DEP marca memória como não-executável. Juntos: sem endereço previsível e sem execução mesmo se encontrado.",type:"open"},
+    {q:"Descreva o funcionamento do Canário de Pilha e o que ocorre ao tentar sobrescrever o Endereço de Retorno.",ans:"Valor secreto inserido antes do Retorno. O overflow obrigatoriamente esmaga o Canário. Checagem falha → sistema aborta imediatamente.",type:"open"},
+  ]
+};
+
+const aulas=Object.keys(data);
+let currentAula=aulas[0],cards=[],idx=0,flipped=false;
+
+function buildAulaButtons(){
+  const c=document.getElementById('aulaBtns');
+  c.innerHTML='';
+  aulas.forEach(a=>{
+    const b=document.createElement('button');
+    b.className='aula-btn'+(a===currentAula?' active':'');
+    b.textContent=a;
+    b.onclick=()=>{currentAula=a;loadAula();};
+    c.appendChild(b);
+  });
+}
+
+function loadAula(){
+  cards=data[currentAula];idx=0;flipped=false;
+  document.getElementById('card').classList.remove('flipped');
+  buildAulaButtons();render();
+}
+
+function render(){
+  const c=cards[idx];
+  document.getElementById('qnum').textContent='Questão '+(idx+1)+' de '+cards.length;
+  document.getElementById('qtype').textContent=c.type==='mc'?'múltipla escolha':'dissertativa';
+  let qt=c.q;
+  if(c.type==='mc'&&c.opts){qt+='<br><br><small>'+c.opts.join('<br>')+'</small>';}
+  document.getElementById('qtext').innerHTML=qt;
+  document.getElementById('answer').textContent=c.ans;
+  document.getElementById('idx').textContent=(idx+1)+' / '+cards.length;
+  document.getElementById('btnPrev').disabled=idx===0;
+  document.getElementById('btnNext').disabled=idx===cards.length-1;
+  document.getElementById('progress').textContent=currentAula+' · '+cards.length+' cards';
+}
+
+function flipCard(){
+  flipped=!flipped;
+  document.getElementById('card').classList.toggle('flipped',flipped);
+}
+
+function go(dir){
+  const next=idx+dir;
+  if(next<0||next>=cards.length)return;
+  idx=next;flipped=false;
+  document.getElementById('card').classList.remove('flipped');render();
+}
+
+loadAula();
+</script>
+</body>
+</html>
