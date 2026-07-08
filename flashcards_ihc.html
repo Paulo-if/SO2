@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Avaliação de IHC — Flashcards & Kahoot</title>
+<style>
+  :root{
+    --ink:#12232b;
+    --paper:#eef2f0;
+    --panel:#ffffff;
+    --teal:#0f6e6e;
+    --teal-dark:#0a4f4f;
+    --amber:#e8a13d;
+    --coral:#e0654f;
+    --line:#d8ddd9;
+    --muted:#5c6b68;
+    --good:#2f9e5c;
+    --bad:#d4483d;
+    --radius:18px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(circle at 8% 12%, #d8e8e2 0%, transparent 45%),
+      radial-gradient(circle at 92% 85%, #fbe6cf 0%, transparent 40%),
+      var(--paper);
+    min-height:100vh;
+    font-family:'Iowan Old Style','Georgia',serif;
+    color:var(--ink);
+    padding:28px 16px 60px;
+  }
+  .wrap{max-width:880px;margin:0 auto;}
+  header{text-align:center;margin-bottom:22px;}
+  .eyebrow{
+    font-family:'Helvetica Neue',Arial,sans-serif;
+    text-transform:uppercase;
+    letter-spacing:.14em;
+    font-size:12px;
+    color:var(--teal-dark);
+    font-weight:700;
+  }
+  h1{
+    font-size:clamp(28px,5vw,40px);
+    margin:6px 0 4px;
+    font-weight:700;
+  }
+  .sub{
+    font-family:'Helvetica Neue',Arial,sans-serif;
+    color:var(--muted);
+    font-size:14.5px;
+    max-width:520px;
+    margin:0 auto;
+  }
+
+  nav.tabs{
+    display:flex;
+    gap:8px;
+    justify-content:center;
+    margin:22px 0 28px;
+    font-family:'Helvetica Neue',Arial,sans-serif;
+  }
+  nav.tabs button{
+    border:1.5px solid var(--teal);
+    background:transparent;
+    color:var(--teal-dark);
+    padding:10px 20px;
+    border-radius:999px;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    transition:.15s;
+  }
+  nav.tabs button.active{
+    background:var(--teal);
+    color:#fff;
+  }
+  nav.tabs button:hover{ opacity:.88; }
+
+  .view{ display:none; }
+  .view.active{ display:block; }
+
+  /* ---------- FLASHCARDS ---------- */
+  .deck-meta{
+    font-family:'Helvetica Neue',Arial,sans-serif;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:13px;
+    color:var(--muted);
+    margin-bottom:10px;
+    padding:0 4px;
+  }
+  select#deckPicker{
+    font-family:'Helvetica Neue',Arial,sans-serif;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:6px 10px;
+    background:#fff;
+    color:var(--ink);
+    font-size:13px;
+  }
+  .progress-track{
+    height:6px;
+    background:#dfe6e2;
+    border-radius:6px;
+    overflow:hidden;
+    margin-bottom:22px;
+  }
+  .progress-fill{
+    height:100%;
+    background:linear-gradient(90deg,var(--teal),var(--amber));
+    width:2%;
+    transition:width .25s ease;
+  }
+
+  .card-stage{
+    perspective:1600px;
+    height:340px;
+    margin-bottom:18px;
+  }
+  .card{
+    position:relative;
+    width:100%;
+    height:100%;
+    cursor:pointer;
+    transform-style:preserve-3d;
+    transition:transform .5s cubic-bezier(.4,.2,.2,1);
+  }
+  .card.flipped{ transform:rotateY(180deg); }
+  .face{
+    position:absolute;
+    inset:0;
+    backface-visibility:hidden;
+    border-radius:var(--radius);
+    padding:30px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    box-shadow:0 10px 30px -12px rgba(15,60,55,.35);
+  }
+  .face.front{
+    background:var(--panel);
+    border:1px solid var(--line);
+  }
+  .face.back{
+    background:var(--teal-dark);
+    color:#fdf9f1;
+    transform:rotateY(180deg);
+  }
+  .face .tag{
+    font-family:'Helvetica Neue',Arial,sans-serif;
+    text-transform:uppercase;
+    font-size:11px;
+    letter-spacing:.1em;
+    font-weight:700;
+    margin-bottom:14px;
+  }
+  .face.front .tag{ color:var(--coral); }
+  .face.back .tag{ color:var(--amber); }
+  .face .content{
+    font-size:20px;
+    line-height:1.45;
+    overflow-y:auto;
+  }
+  .face.back .content{ font-size:17px; }
+  .face .hint{
+    font-family:'Helvetica Neue',Arial,sans-serif;
+    font-size:12px;
+    color:var(--muted);
+    margin-top:16px;
+  }
+  .face.back .hint{ color:#cfe3df; }
+
+  .controls{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:14px;
+    font-family:'Helvetica Neue',Arial,sans-serif;
+  }
+  .controls button{
+    border:none;
+    background:var(--panel);
+    border:1.5px solid var(--line);
+    width:46px;height:46px;
+    border-radius:50%;
+    font-size:18px;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:.15s;
+  }
+  .controls button:hover{ background:var(--teal); color:#fff; border-color:var(--teal); }
+  .controls .shuffle{
+    width:auto;border-radius:999px;padding:0 18px;font-size:13px;font-weight:600;
+  }
+  .counter{ font-size:13.5px; color:var(--muted); min-width:64px; text-align:center; }
+
+  /* ---------- KAHOOT ---------- */
+  .kahoot-intro{
+    text-align:center;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:40px 24px;
+    font-family:'Helvetica Neue',Arial,sans-serif;
+  }
+  .kahoot-intro .khicon{
+    width:64px;height:64px;border-radius:16px;
+    background:linear-gradient(135deg,var(--coral),var(--amber));
+    margin:0 auto 18px;
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-size:28px;font-weight:800;
+    transform:rotate(-6deg);
+  }
+  .kahoot-intro h2{ font-family:'Iowan Old Style',Georgia,serif; font-size:26px; margin:0 0 8px;}
+  .kahoot-intro p{ color:var(--muted); font-size:14px; max-width:420px; margin:0 auto 22px;}
+  .start-btn{
+    font-family:'Helvetica Neue',Arial,sans-serif;
+    background:var(--teal);
+    color:#fff;
+    border:none;
+    padding:14px 34px;
+    border-radius:999px;
+    font-size:15px;
+    font-weight:700;
+    cursor:pointer;
+    box-shadow:0 8px 18px -6px rgba(15,110,110,.5);
+  }
+  .start-btn:hover{ background:var(--teal-dark); }
+
+  .quiz-top{
+    font-family:'Helvetica Neue',Arial,sans-serif;
+    display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:16px;font-size:13px;color:var(--muted);
+  }
+  .pill{
+    background:var(--panel);border:1px solid var(--line);
+    padding:5px 12px;border-radius:999px;font-weight:600;
+  }
+  .qcard{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:30px;
+    text-align:center;
+    margin-bottom:20px;
+    min-height:110px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .qcard .qnum{
+    font-family:'Helvetica Neue',Arial,sans-serif;
+    color:var(--coral); font-weight:700; font-size:12px;
+    text-transform:uppercase; letter-spacing:.08em;
+    display:block; margin-bottom:10px;
+  }
+  .qcard .qtext{ font-size:21px; line-height:1.4; }
+
+  .options{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+    font-family:'Helvetica Neue',Arial,sans-serif;
+  }
+  @media (max-width:560px){ .options{ grid-template-columns:1fr; } }
+  .opt{
+    border:none;
+    border-radius:14px;
+    padding:18px 16px;
+    font-size:15.5px;
+    font-weight:600;
+    text-align:left;
+    color:#fff;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    transition:transform .1s ease, filter .15s ease;
+  }
+  .opt:hover{ filter:brightness(1.08); }
+  .opt:active{ transform:scale(.98); }
+  .opt .shape{ font-size:18px; }
+  .opt.o0{ background:#d4483d; }
+  .opt.o1{ background:#2f6fd6; }
+  .opt.o2{ background:#e0a92d; }
+  .opt.o3{ background:#2f9e5c; }
+  .opt.correct{ outline:3px solid #145c33; }
+  .opt.wrong{ outline:3px solid #7a201a; opacity:.6; }
+  .opt[disabled]{ cursor:default; }
+
+  .feedback{
+    text-align:center;
+    font-family:'Helvetica Neue',Arial,sans-serif;
+    font-weight:700;
+    font-size:15px;
+    margin-bottom:14px;
+    min-height:20px;
+  }
+  .feedback.good{ color:var(--good); }
+  .feedback.bad{ color:var(--bad); }
+
+  .quiz-actions{ text-align:center; }
+  .next-btn{
+    font-family:'Helvetica Neue',Arial,sans-serif;
+    background:var(--ink); color:#fff; border:none;
+    padding:12px 28px;border-radius:999px;font-weight:700;font-size:14px;
+    cursor:pointer;
+  }
+  .next-btn:hover{ background:#000; }
+
+  .results{
+    text-align:center;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:44px 24px;
+    font-family:'Helvetica Neue',Arial,sans-serif;
+  }
+  .results .score{
+    font-family:'Iowan Old Style',Georgia,serif;
+    font-size:52px;font-weight:700;color:var(--teal-dark);
+    margin:8px 0;
+  }
+  .results p{ color:var(--muted); font-size:14px; }
+  .results .msg{ font-size:17px; color:var(--ink); font-weight:600; margin-top:2px;}
+
+  footer{
+    text-align:center;
+    font-family:'Helvetica Neue',Arial,sans-serif;
+    font-size:11.5px;
+    color:var(--muted);
+    margin-top:36px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Unidade II · Avaliação de IHC</div>
+    <h1>Cartões de Estudo</h1>
+    <p class="sub">Baseado no guia de Métodos e Planejamento de Avaliação de IHC (Profa. Ana Carolina Gondim Inocêncio — UFJ)</p>
+  </header>
+
+  <nav class="tabs">
+    <button id="tabFlash" class="active">📇 Flashcards</button>
+    <button id="tabKahoot">🎮 Hora do Kahoot!</button>
+  </nav>
+
+  <!-- ================= FLASHCARDS VIEW ================= -->
+  <section id="viewFlash" class="view active">
+    <div class="deck-meta">
+      <span id="deckCount">Cartão 1 de 47</span>
+      <select id="deckPicker">
+        <option value="all">Todos os temas</option>
+        <option value="inspecao">Inspeção</option>
+        <option value="observacao">Observação</option>
+        <option value="planejamento">Planejamento</option>
+        <option value="decide">DECIDE & Dados</option>
+      </select>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+    <div class="card-stage">
+      <div class="card" id="card">
+        <div class="face front">
+          <span class="tag">Pergunta</span>
+          <div class="content" id="frontText"></div>
+          <span class="hint">toque no cartão para ver a resposta</span>
+        </div>
+        <div class="face back">
+          <span class="tag">Resposta</span>
+          <div class="content" id="backText"></div>
+          <span class="hint">toque novamente para virar</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="prevBtn" title="Anterior">‹</button>
+      <span class="counter" id="counterText">1 / 47</span>
+      <button id="nextBtn" title="Próximo">›</button>
+      <button class="shuffle" id="shuffleBtn">🔀 Embaralhar</button>
+    </div>
+  </section>
+
+  <!-- ================= KAHOOT VIEW ================= -->
+  <section id="viewKahoot" class="view">
+
+    <div id="khIntro" class="kahoot-intro">
+      <div class="khicon">K!</div>
+      <h2>Hora do Kahoot!</h2>
+      <p>Vamos revisar os métodos de avaliação de IHC jogando — 20 perguntas de múltipla escolha, no estilo Kahoot.</p>
+      <button class="start-btn" id="khStart">Começar a jogar</button>
+    </div>
+
+    <div id="khGame" style="display:none;">
+      <div class="quiz-top">
+        <span class="pill" id="khProgress">Pergunta 1/20</span>
+        <span class="pill" id="khScore">Pontos: 0</span>
+      </div>
+      <div class="qcard">
+        <div>
+          <span class="qnum" id="khQnum">Pergunta 1</span>
+          <div class="qtext" id="khQtext"></div>
+        </div>
+      </div>
+      <div class="feedback" id="khFeedback"></div>
+      <div class="options" id="khOptions"></div>
+      <div class="quiz-actions" style="margin-top:18px;">
+        <button class="next-btn" id="khNext" style="display:none;">Próxima pergunta →</button>
+      </div>
+    </div>
+
+    <div id="khResults" class="results" style="display:none;">
+      <div class="eyebrow">Fim de jogo</div>
+      <div class="score" id="khFinalScore">0/20</div>
+      <div class="msg" id="khMsg"></div>
+      <p>Reveja os flashcards nos temas que errou e jogue de novo para fixar.</p>
+      <button class="start-btn" id="khReplay">Jogar novamente</button>
+    </div>
+  </section>
+
+  <footer>Material de estudo gerado a partir do guia da disciplina — apenas para revisão pessoal.</footer>
+</div>
+
+<script>
+/* ============================================================
+   DATA
+   ============================================================ */
+const CARDS = [
+  {t:"inspecao", q:"O que é 'avaliar' em IHC?", a:"É quando o avaliador examina uma solução de interface para fazer um julgamento de valor sobre a qualidade de uso e identificar problemas que atrapalham a experiência do usuário."},
+  {t:"inspecao", q:"Qual a diferença central entre Inspeção e Observação?", a:"Inspeção: um especialista imagina como seria o uso e antecipa problemas (usuário real não participa). Observação: usuários reais usam o sistema e o avaliador registra o que acontece."},
+  {t:"inspecao", q:"Quantas heurísticas Nielsen propôs e em que se basearam?", a:"10 heurísticas, baseadas na análise de mais de 240 problemas reais de usabilidade."},
+  {t:"inspecao", q:"Heurística 1 de Nielsen — qual é e um exemplo?", a:"Visibilidade do estado do sistema. Ex.: o Airbnb atualiza a busca na hora ao mudar o número de hóspedes."},
+  {t:"inspecao", q:"Heurística 2 de Nielsen — qual é e um exemplo?", a:"Correspondência com o mundo real. Ex.: um sistema jurídico usa termos jurídicos, não termos de programação."},
+  {t:"inspecao", q:"Heurística 3 de Nielsen — qual é e um exemplo?", a:"Controle e liberdade do usuário. Ex.: a lixeira do e-mail permite recuperar uma mensagem apagada."},
+  {t:"inspecao", q:"Heurística 4 de Nielsen — qual é e um exemplo?", a:"Consistência e padronização. Ex.: os produtos do Google têm visual padronizado entre si."},
+  {t:"inspecao", q:"Heurística 5 de Nielsen — qual é e um exemplo?", a:"Reconhecimento em vez de memorização. Ex.: a Amazon sempre mostra em qual categoria você está."},
+  {t:"inspecao", q:"Heurística 6 de Nielsen — qual é e um exemplo?", a:"Flexibilidade e eficiência de uso. Ex.: atalhos de teclado — quem não usa não é prejudicado."},
+  {t:"inspecao", q:"Heurística 7 de Nielsen — qual é e um exemplo?", a:"Projeto estético e minimalista. Ideia: 'menos é mais' — cada elemento extra 'rouba' atenção."},
+  {t:"inspecao", q:"Heurística 8 de Nielsen — qual é e um exemplo?", a:"Prevenção de erros. Ex.: o Instagram pergunta 'tem certeza?' antes de descartar um Stories."},
+  {t:"inspecao", q:"Heurística 9 de Nielsen — qual é e um exemplo?", a:"Ajudar a reconhecer, diagnosticar e corrigir erros. Ex.: erro exibido em linguagem simples, sem código indecifrável."},
+  {t:"inspecao", q:"Heurística 10 de Nielsen — qual é e um exemplo?", a:"Ajuda e documentação. Ex.: ajuda fácil de achar, focada na tarefa e objetiva."},
+  {t:"inspecao", q:"Quais os 4 passos para conduzir uma Avaliação Heurística?", a:"1) Preparação (telas + lista de heurísticas). 2) Inspeção individual (cada avaliador percorre a interface, no mínimo 2x). 3) Julgamento de severidade (frequência, impacto, persistência). 4) Consolidação (reunião para definir severidade final)."},
+  {t:"inspecao", q:"Quantos avaliadores e quanto tempo Nielsen recomenda para a Avaliação Heurística?", a:"De 3 a 5 avaliadores, em sessões de 1 a 2 horas."},
+  {t:"inspecao", q:"Descreva a escala de severidade de Nielsen (0 a 3).", a:"0 = Cosmético (só conserta se sobrar tempo). 1 = Pequeno (baixa prioridade). 2 = Grande (prejudica usabilidade, alta prioridade). 3 = Catastrófico (impede concluir a tarefa — corrigir antes de lançar)."},
+  {t:"inspecao", q:"Qual o foco do Percurso Cognitivo (Cognitive Walkthrough)?", a:"A facilidade de aprendizado — o avaliador simula passo a passo as ações de um usuário tentando 'aprender fazendo' uma tarefa."},
+  {t:"inspecao", q:"Quais as 4 perguntas feitas em cada passo do Percurso Cognitivo?", a:"1) O usuário tentaria atingir esse efeito desejado? 2) Perceberia que a ação correta está disponível? 3) Associaria a ação correta ao efeito desejado? 4) Perceberia que está progredindo depois de agir?"},
+  {t:"inspecao", q:"No Percurso Cognitivo, o que fazer quando o usuário não percebe que a ação existe?", a:"Tornar a ação mais evidente, por exemplo com um botão mais visível."},
+  {t:"inspecao", q:"No Percurso Cognitivo, o que fazer quando o usuário não associa a ação ao efeito desejado?", a:"Renomear as ações, usando um vocabulário mais familiar ao usuário."},
+  {t:"inspecao", q:"O que é a 'metamensagem' na Inspeção Semiótica?", a:"É o entendimento do designer, comunicado através da interface, sobre quem é o usuário, o que ele quer/precisa fazer e como o sistema foi projetado para ser usado."},
+  {t:"inspecao", q:"Quais os 3 tipos de signos analisados na Inspeção Semiótica?", a:"Estáticos (telas, botões, layout), Dinâmicos (mudanças/transições durante a interação) e Metalinguísticos (ajuda, manuais, documentação)."},
+  {t:"inspecao", q:"Qual o processo da Inspeção Semiótica?", a:"Preparação → Coleta (reconstrói a metamensagem em cada tipo de signo) → Contraste (compara as 3 metamensagens buscando contradições) → Relato."},
+  {t:"inspecao", q:"Quantos avaliadores a Inspeção Semiótica exige e quando funciona melhor?", a:"Não exige mais de 1 avaliador. Funciona melhor na versão final do sistema."},
+  {t:"observacao", q:"O que se mede em um Teste de Usabilidade?", a:"Grau de sucesso na execução, total de erros e tipos de erro, tempo necessário para concluir, grau de satisfação e quantas vezes o usuário consultou ajuda/manual."},
+  {t:"observacao", q:"Qual o processo de um Teste de Usabilidade?", a:"Preparação (definir tarefas e questionário pré-teste) → Observação (sessão de uso + entrevista pós-teste) → Interpretação (dados quanti/quali) → Relato (tabelas/gráficos + lista de problemas)."},
+  {t:"observacao", q:"O que a Avaliação de Comunicabilidade avalia, e qual a diferença para a Inspeção Semiótica?", a:"Avalia a qualidade da recepção da metamensagem pelo usuário real (ponto de vista do usuário), enquanto a Inspeção Semiótica avalia a qualidade da emissão, do ponto de vista do especialista."},
+  {t:"observacao", q:"Na Avaliação de Comunicabilidade, o que significa a etiqueta 'Cadê?'", a:"O usuário sabe o que quer, mas não acha o elemento na interface."},
+  {t:"observacao", q:"Na Avaliação de Comunicabilidade, o que significa a etiqueta 'E agora?'", a:"O usuário não sabe qual é o próximo passo."},
+  {t:"observacao", q:"Na Avaliação de Comunicabilidade, o que significa a etiqueta 'Epa!'", a:"O usuário percebe rápido um engano e tenta desfazer a ação."},
+  {t:"observacao", q:"Na Avaliação de Comunicabilidade, o que significa a etiqueta 'Assim não dá'?", a:"O usuário abandona um caminho longo por achar improdutivo."},
+  {t:"observacao", q:"O que é o 'perfil semiótico' na Avaliação de Comunicabilidade?", a:"É o resultado da consolidação: analisa-se a frequência/contexto de cada etiqueta e sequências de etiquetas (ex.: 'Cadê?' → 'Assim não dá' → 'Desisto' indica falha grave)."},
+  {t:"observacao", q:"O que é a Prototipação em Papel e quais suas duas partes?", a:"É uma simulação de uso com protótipo em papel, barata e rápida. Tem uma parte estática (telas com elementos principais) e uma dinâmica (menus, dicas, resultados que mudam)."},
+  {t:"observacao", q:"Cite uma vantagem e uma desvantagem da Prototipação em Papel.", a:"Vantagem: criação e descarte rápidos, baixo orçamento. Desvantagem: pode gerar falsos positivos, pois o usuário precisa imaginar o produto final."},
+  {t:"observacao", q:"Dos 6 métodos estudados, quais envolvem usuários reais?", a:"Teste de Usabilidade, Avaliação de Comunicabilidade e Prototipação em Papel. (Heurística, Percurso Cognitivo e Inspeção Semiótica não envolvem usuários.)"},
+  {t:"planejamento", q:"Quais são os 4 grandes focos de 'o que avaliar' em IHC?", a:"1) Apropriação de tecnologia. 2) Ideias e alternativas de design. 3) Conformidade com um padrão. 4) Problemas na interação e na interface (o mais avaliado)."},
+  {t:"planejamento", q:"Qual a diferença entre avaliação Formativa e Somativa?", a:"Formativa: ocorre durante a elaboração da solução, para achar problemas cedo. Somativa: ocorre depois da solução pronta, para julgar se as metas de design foram alcançadas."},
+  {t:"planejamento", q:"Cite uma vantagem do estudo de campo sobre o laboratório.", a:"Mostra situações de uso típicas que não apareceriam em laboratório, e ajuda a entender como o usuário se apropria da tecnologia no dia a dia."},
+  {t:"decide", q:"Quais são as 3 grandes categorias de métodos de avaliação?", a:"Investigação (inquiry: questionário, entrevista, grupo de foco, estudo de campo), Inspeção (especialista, sem usuários) e Observação (usuários reais fazendo tarefas)."},
+  {t:"decide", q:"Quais são as 5 atividades básicas de 'como avaliar'?", a:"1) Preparação. 2) Coleta de dados. 3) Interpretação. 4) Consolidação. 5) Relato dos resultados."},
+  {t:"decide", q:"Quantos participantes costuma-se recrutar numa avaliação, e o que Nielsen (2000) descobriu?", a:"Geralmente de 5 a 12 usuários. Nielsen (2000) descobriu que 5 usuários já encontram cerca de 85% dos problemas."},
+  {t:"decide", q:"Na Interpretação dos resultados, o que significa análise 'intrassujeito'?", a:"É a análise de cada participante isoladamente, antes de comparar com os demais."},
+  {t:"decide", q:"Na Consolidação dos resultados, o que significa análise 'intersujeito'?", a:"É a análise que junta os resultados individuais de todos os participantes, buscando recorrências entre eles."},
+  {t:"decide", q:"O que diferencia dados Nominais de Ordinais?", a:"Nominais são rótulos/categorias sem ordem (ex.: origem étnica). Ordinais têm uma ordem, mas não a distância entre os itens (ex.: ranking de sites mais usados)."},
+  {t:"decide", q:"O que diferencia dados de Intervalo e de Razão?", a:"Intervalo tem faixas/distâncias entre dados ordinais (ex.: faixa etária). Razão tem um zero verdadeiro, permitindo proporção (ex.: dizer que o tempo de tarefa de um participante foi 'o triplo' do de outro)."},
+  {t:"decide", q:"Qual a diferença entre dados Qualitativos e Quantitativos?", a:"Qualitativos são não numéricos (nominal + respostas livres), com foco em interpretar o que ocorreu. Quantitativos são numéricos (ordinal, intervalo, razão), usados para testar hipóteses, com foco em contar e medir."},
+  {t:"decide", q:"O que significa cada letra do Framework DECIDE?", a:"D - Determinar os objetivos. E - Explorar as perguntas. C - Choose (escolher) os métodos. I - Identificar questões práticas. D - Decidir questões éticas. E - Evaluate (avaliar), interpretar e apresentar os dados."},
+  {t:"decide", q:"No 'Evaluate' do DECIDE, o que é confiabilidade, validade interna, externa e ecológica?", a:"Confiabilidade: resultados semelhantes se repetir o método. Validade interna: o método mede o que deveria, sem distorcer dados. Validade externa: dá pra generalizar para outro contexto. Validade ecológica: o quanto o ambiente/materiais do estudo se parecem com a situação real."}
+];
+
+const QUIZ = [
+  {q:"Qual método de avaliação envolve um especialista que confronta a interface com uma lista de boas práticas?", o:["Teste de Usabilidade","Avaliação Heurística","Prototipação em papel","Grupo de foco"], c:1},
+  {q:"Quantas heurísticas Nielsen propôs?", o:["8","12","10","5"], c:2},
+  {q:"Qual heurística é ilustrada pelo Airbnb atualizando a busca em tempo real?", o:["Consistência e padronização","Visibilidade do estado do sistema","Estética minimalista","Ajuda e documentação"], c:1},
+  {q:"Na escala de severidade de Nielsen, o que significa a nota 3?", o:["Cosmético","Pequeno","Grande","Catastrófico"], c:3},
+  {q:"Quantos avaliadores Nielsen recomenda para a avaliação heurística?", o:["Apenas 1","3 a 5","10 a 12","20 ou mais"], c:1},
+  {q:"O Percurso Cognitivo tem foco principal em quê?", o:["Estética da interface","Facilidade de aprendizado","Conformidade com padrões","Acessibilidade"], c:1},
+  {q:"Quantas perguntas são feitas a cada passo no Percurso Cognitivo?", o:["2","3","4","5"], c:2},
+  {q:"O que é a 'metamensagem' na Inspeção Semiótica?", o:["O manual do usuário","O entendimento do designer sobre o usuário, comunicado pela interface","Um tipo de teste de usabilidade","O relatório final da avaliação"], c:1},
+  {q:"Quais são os 3 tipos de signos analisados na Inspeção Semiótica?", o:["Nominal, ordinal, intervalo","Estáticos, dinâmicos, metalinguísticos","Visual, sonoro, tátil","Formal, informal, técnico"], c:1},
+  {q:"A Avaliação de Comunicabilidade avalia a qualidade de quê?", o:["Da emissão da metacomunicação (especialista)","Da recepção da metacomunicação (usuário real)","Do desempenho do servidor","Da estética visual da interface"], c:1},
+  {q:"Qual etiqueta indica que o usuário sabe o que quer, mas não acha na interface?", o:["'E agora?'","'Cadê?'","'Epa!'","'Desisto'"], c:1},
+  {q:"O que caracteriza uma avaliação Formativa?", o:["Ocorre depois que a solução está pronta","Ocorre durante a elaboração, antes de estar pronta","Usa apenas questionários","Nunca usa protótipos"], c:1},
+  {q:"Segundo Nielsen (2000), quantos usuários já encontram cerca de 85% dos problemas?", o:["1","3","5","20"], c:2},
+  {q:"Qual tipo de dado tem um zero verdadeiro e permite proporção (ex.: tempo de tarefa)?", o:["Nominal","Ordinal","Intervalo","Razão"], c:3},
+  {q:"No Framework DECIDE, o que representa o segundo 'D'?", o:["Determinar objetivos","Decidir questões éticas","Documentar dados","Definir escopo"], c:1},
+  {q:"Qual validade avalia se o método mede o que deveria, sem distorcer os dados?", o:["Validade externa","Validade interna","Validade ecológica","Confiabilidade"], c:1},
+  {q:"Qual dos métodos abaixo NÃO envolve usuários reais?", o:["Teste de Usabilidade","Avaliação de Comunicabilidade","Avaliação Heurística","Prototipação em papel"], c:2},
+  {q:"Qual é uma vantagem de um estudo de campo em relação ao laboratório?", o:["Mais controle sobre interferências do ambiente","Facilita o registro de dados","Mostra situações de uso típicas que não apareceriam em laboratório","Permite comparação mais consistente entre usuários"], c:2},
+  {q:"Qual das opções é um dos 4 grandes focos de 'o que avaliar'?", o:["Apropriação de tecnologia","Tempo de resposta do servidor","Custo de manutenção do sistema","Linguagem de programação usada"], c:0},
+  {q:"No processo de 'como avaliar', qual é a primeira das 5 atividades?", o:["Coleta de dados","Preparação","Interpretação","Relato dos resultados"], c:1}
+];
+
+/* ============================================================
+   TABS
+   ============================================================ */
+const tabFlash = document.getElementById('tabFlash');
+const tabKahoot = document.getElementById('tabKahoot');
+const viewFlash = document.getElementById('viewFlash');
+const viewKahoot = document.getElementById('viewKahoot');
+
+tabFlash.onclick = () => {
+  tabFlash.classList.add('active'); tabKahoot.classList.remove('active');
+  viewFlash.classList.add('active'); viewKahoot.classList.remove('active');
+};
+tabKahoot.onclick = () => {
+  tabKahoot.classList.add('active'); tabFlash.classList.remove('active');
+  viewKahoot.classList.add('active'); viewFlash.classList.remove('active');
+};
+
+/* ============================================================
+   FLASHCARDS LOGIC
+   ============================================================ */
+let deck = CARDS.slice();
+let idx = 0;
+
+const cardEl = document.getElementById('card');
+const frontText = document.getElementById('frontText');
+const backText = document.getElementById('backText');
+const counterText = document.getElementById('counterText');
+const deckCount = document.getElementById('deckCount');
+const progressFill = document.getElementById('progressFill');
+const deckPicker = document.getElementById('deckPicker');
+
+function renderCard(){
+  cardEl.classList.remove('flipped');
+  const c = deck[idx];
+  frontText.textContent = c.q;
+  backText.textContent = c.a;
+  counterText.textContent = (idx+1) + " / " + deck.length;
+  deckCount.textContent = "Cartão " + (idx+1) + " de " + deck.length;
+  progressFill.style.width = Math.max(3, ((idx+1)/deck.length*100)) + "%";
+}
+
+cardEl.addEventListener('click', ()=> cardEl.classList.toggle('flipped'));
+
+document.getElementById('nextBtn').onclick = ()=>{
+  idx = (idx+1) % deck.length;
+  renderCard();
+};
+document.getElementById('prevBtn').onclick = ()=>{
+  idx = (idx-1+deck.length) % deck.length;
+  renderCard();
+};
+document.getElementById('shuffleBtn').onclick = ()=>{
+  for(let i=deck.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [deck[i],deck[j]]=[deck[j],deck[i]];
+  }
+  idx = 0;
+  renderCard();
+};
+deckPicker.onchange = ()=>{
+  const val = deckPicker.value;
+  deck = (val === 'all') ? CARDS.slice() : CARDS.filter(c=>c.t===val);
+  idx = 0;
+  renderCard();
+};
+
+renderCard();
+
+/* ============================================================
+   KAHOOT LOGIC
+   ============================================================ */
+const khIntro = document.getElementById('khIntro');
+const khGame = document.getElementById('khGame');
+const khResults = document.getElementById('khResults');
+const khQnum = document.getElementById('khQnum');
+const khQtext = document.getElementById('khQtext');
+const khOptions = document.getElementById('khOptions');
+const khProgress = document.getElementById('khProgress');
+const khScore = document.getElementById('khScore');
+const khFeedback = document.getElementById('khFeedback');
+const khNext = document.getElementById('khNext');
+
+const SHAPES = ['▲','◆','●','■'];
+let quiz = [];
+let qi = 0;
+let score = 0;
+let answered = false;
+
+function startQuiz(){
+  quiz = QUIZ.slice();
+  for(let i=quiz.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [quiz[i],quiz[j]]=[quiz[j],quiz[i]];
+  }
+  qi = 0; score = 0;
+  khIntro.style.display='none';
+  khResults.style.display='none';
+  khGame.style.display='block';
+  renderQuestion();
+}
+
+function renderQuestion(){
+  answered = false;
+  khFeedback.textContent = '';
+  khFeedback.className = 'feedback';
+  khNext.style.display = 'none';
+  const item = quiz[qi];
+  khQnum.textContent = "Pergunta " + (qi+1);
+  khQtext.textContent = item.q;
+  khProgress.textContent = "Pergunta " + (qi+1) + "/" + quiz.length;
+  khScore.textContent = "Pontos: " + score;
+
+  khOptions.innerHTML = '';
+  item.o.forEach((opt, i)=>{
+    const btn = document.createElement('button');
+    btn.className = 'opt o' + i;
+    btn.innerHTML = '<span class="shape">' + SHAPES[i] + '</span><span>' + opt + '</span>';
+    btn.onclick = ()=> selectAnswer(i);
+    khOptions.appendChild(btn);
+  });
+}
+
+function selectAnswer(i){
+  if(answered) return;
+  answered = true;
+  const item = quiz[qi];
+  const buttons = khOptions.querySelectorAll('.opt');
+  buttons.forEach((b, bi)=>{
+    b.disabled = true;
+    if(bi === item.c) b.classList.add('correct');
+    else if(bi === i) b.classList.add('wrong');
+  });
+  if(i === item.c){
+    score++;
+    khFeedback.textContent = '✅ Correto!';
+    khFeedback.classList.add('good');
+  } else {
+    khFeedback.textContent = '❌ Resposta certa: ' + item.o[item.c];
+    khFeedback.classList.add('bad');
+  }
+  khScore.textContent = "Pontos: " + score;
+  khNext.style.display = 'inline-block';
+}
+
+khNext.onclick = ()=>{
+  qi++;
+  if(qi >= quiz.length){
+    showResults();
+  } else {
+    renderQuestion();
+  }
+};
+
+function showResults(){
+  khGame.style.display = 'none';
+  khResults.style.display = 'block';
+  document.getElementById('khFinalScore').textContent = score + "/" + quiz.length;
+  const pct = score/quiz.length;
+  let msg = "Continue estudando!";
+  if(pct === 1) msg = "Perfeito — você domina o conteúdo! 🏆";
+  else if(pct >= 0.8) msg = "Muito bem! Quase tudo certo. 🎉";
+  else if(pct >= 0.5) msg = "Bom começo — revise os pontos fracos.";
+  document.getElementById('khMsg').textContent = msg;
+}
+
+document.getElementById('khStart').onclick = startQuiz;
+document.getElementById('khReplay').onclick = startQuiz;
+</script>
+</body>
+</html>
